@@ -1,6 +1,9 @@
 {
-  "appHostPath": "../apphost.ts",
+  "appHostPath": "../apphost-azure.ts",
   "language": "typescript",
   "channel": "stable",
-  "sdkVersion": "13.1.0"
+  "sdkVersion": "13.1.0",
+  "packages": {
+    "Aspire.Hosting.Azure": ""
+  }
 }

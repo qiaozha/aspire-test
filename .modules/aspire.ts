@@ -29,6 +29,9 @@ import {
 /** Handle to CommandLineArgsCallbackContext */
 type CommandLineArgsCallbackContextHandle = Handle<'Aspire.Hosting/Aspire.Hosting.ApplicationModel.CommandLineArgsCallbackContext'>;
 
+/** Handle to AzureBicepResource */
+type AzureBicepResourceHandle = Handle<'Aspire.Hosting.Azure/Aspire.Hosting.Azure.AzureBicepResource'>;
+
 /** Handle to ContainerResource */
 type ContainerResourceHandle = Handle<'Aspire.Hosting/Aspire.Hosting.ApplicationModel.ContainerResource'>;
 
@@ -998,6 +1001,21 @@ export class DistributedApplicationBuilder {
         return new ProjectResourcePromise(this._addProjectInternal(name, projectPath, launchProfileName));
     }
 
+    /** Adds an Azure Bicep template resource from an inline Bicep string */
+    /** @internal */
+    async _addBicepTemplateStringInternal(name: string, bicepContent: string): Promise<AzureBicepResource> {
+        const rpcArgs: Record<string, unknown> = { builder: this._handle, name, bicepContent };
+        const result = await this._client.invokeCapability<AzureBicepResourceHandle>(
+            'Aspire.Hosting.Azure/addBicepTemplateString',
+            rpcArgs
+        );
+        return new AzureBicepResource(result, this._client);
+    }
+
+    addBicepTemplateString(name: string, bicepContent: string): AzureBicepResourcePromise {
+        return new AzureBicepResourcePromise(this._addBicepTemplateStringInternal(name, bicepContent));
+    }
+
 }
 
 /**
@@ -1043,11 +1061,50 @@ export class DistributedApplicationBuilderPromise implements PromiseLike<Distrib
         return new ProjectResourcePromise(this._promise.then(obj => obj.addProject(name, projectPath, launchProfileName)));
     }
 
+    /** Adds an Azure Bicep template resource from an inline Bicep string */
+    addBicepTemplateString(name: string, bicepContent: string): AzureBicepResourcePromise {
+        return new AzureBicepResourcePromise(this._promise.then(obj => obj.addBicepTemplateString(name, bicepContent)));
+    }
+
 }
 
 // ============================================================================
-// DistributedApplicationEventing
+// AzureBicepResource
 // ============================================================================
+
+/**
+ * Thenable wrapper for AzureBicepResource.
+ */
+export class AzureBicepResourcePromise implements PromiseLike<AzureBicepResource> {
+    constructor(private _promise: Promise<AzureBicepResource>) {}
+
+    then<TResult1 = AzureBicepResource, TResult2 = never>(
+        onfulfilled?: ((value: AzureBicepResource) => TResult1 | PromiseLike<TResult1>) | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
+    ): PromiseLike<TResult1 | TResult2> {
+        return this._promise.then(onfulfilled, onrejected);
+    }
+
+    /** Gets a named output from this Bicep template */
+    getOutput(name: string): Promise<string> {
+        return this._promise.then(obj => obj.getOutput(name));
+    }
+}
+
+/**
+ * Type class for AzureBicepResource.
+ * Represents an Azure resource defined by a Bicep template string.
+ */
+export class AzureBicepResource extends ResourceBuilderBase<AzureBicepResourceHandle> {
+    /** Gets a named output value from this Bicep template */
+    async getOutput(name: string): Promise<string> {
+        const result = await this._client.invokeCapability<string>(
+            'Aspire.Hosting.Azure/getOutput',
+            { builder: this._handle, name }
+        );
+        return result;
+    }
+}
 
 /**
  * Type class for DistributedApplicationEventing.
